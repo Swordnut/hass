@@ -1,18 +1,12 @@
 # Helper script by Swordnut 
 # ===================================================
 # What it does - 
-# outputs RGB/HS or colour temperature values according to the difference between two numeric entity states
-# allows customisation of the range of spectrum to be used 
-#   use a spectrum that goes from red to blue or from green to magenta etc
-#   make sure the values you get from your inputs are always represented
+# Calculates a color value based on the difference between two numeric inputs.
+# Supports RGB, HS, and color_temp outputs. Range type can be symmetric (±max) or positive (0→max).
 # ===================================================
 # How to use - 
-# create an input text helpers called:
-#        input_text.indicator_hs_output
-#         input_text.indicator_rgb_output
-#         input_text.indicator_color_temp_output
-# an action bluebrint is avaialable for setting a light to a colour using the script that gives methods of setting the type of range (+/- or just +) as well as brightness, delay, RGB/HS format etc
-# alternatively call from an automation, passing the values of two numeric entitiy states. 
+# Call from an automation, passing the values of your 
+#   two entitiy states. 
 #   1st is the base, 2nd is the comparison
 #   e.g., 
 #   action: pyscript.calculate_differential_rgb_value
@@ -27,14 +21,15 @@
 #   MAX_RANGE value is plus and minus from neutral/baseline
 #   e.g., 10 will be plus or minus 10, a total range of 20
 # Set COLOR_RANGE_LOW and COLOR_RANGE_HIGH using values 0 - 360
-#   these defined the spectrum of colors mapped to the min/max value of the difference between your entity states (diff)
+#   these defined the spectrum of colors mapped to the min/max 
+#   value of the difference between your entity states (diff)
 #   0= red 60=yellow 120=green 180=cyan 240=blue 300=magenta
-#   e.g., setting low 0 high 240 will result in a spectrum from red at the bottom to blue at the top. 240 low and 0 high will
+#   e.g., setting low 0 high 240 will result in a spectrum from
+#   red at the bottom to blue at the top. 240 low and 0 high will
 #   result in blue at the bottom and red at the top
 
 
 from PIL import ImageColor
-# native to pyscript, no other import handling needed
 
 @service
 def calculate_differential_rgb_value(
@@ -46,15 +41,24 @@ def calculate_differential_rgb_value(
     color_temp_min: int = 500,
     color_temp_max: int = 153,
     use_color_temp: bool = False
+    range_type: str = "symmetric"
 ):
+
     diff = state2 - state1
-    clipped = max(min(diff, max_range), -max_range)
-    scaled = (clipped + max_range) / (2 * max_range)
+
+    if range_type == "positive":
+        clipped = max(min(diff, max_range), 0)
+        scaled = clipped / max_range if max_range != 0 else 0
+    else:  # symmetric
+        clipped = max(min(diff, max_range), -max_range)
+        scaled = (clipped + max_range) / (2 * max_range) if max_range != 0 else 0.5
 
     if use_color_temp:
         color_temp = int((1 - scaled) * color_temp_min + scaled * color_temp_max)
         state.set("input_text.indicator_color_temp_output", str(color_temp))
-        log.info(f"[pyscript] Δ={diff:.2f} → color_temp: {color_temp} mireds")
+        log.info(
+            f"[pyscript] Δ={diff:.2f} (clipped: {clipped}) → color_temp: {color_temp} mireds"
+        )
     else:
         hue_deg = (1 - scaled) * color_range_min + scaled * color_range_max
         hsv_str = f"hsv({int(hue_deg)}, 100%, 100%)"
@@ -65,4 +69,7 @@ def calculate_differential_rgb_value(
         state.set("input_text.indicator_rgb_output", rgb_str)
         state.set("input_text.indicator_hs_output", hs_str)
 
-        log.info(f"[pyscript] Δ={diff:.2f} → hue={hue_deg:.1f}° → RGB: {rgb_str} / HS: {hs_str}")
+        log.info(
+            f"[pyscript] Δ={diff:.2f} (clipped: {clipped}) "
+            f"→ hue={hue_deg:.1f}° → RGB: {rgb_str} / HS: {hs_str}"
+        )
