@@ -42,7 +42,7 @@ def calculate_differential_rgb_value(
     color_range_max: int = 0,
     color_temp_min: int = 500,
     color_temp_max: int = 153,
-    use_color_temp: bool = False
+    use_color_temp: bool = False,
     range_type: str = "symmetric"
 ):
 
