@@ -1,6 +1,7 @@
 fields:
   baseline_entity:
     name: Baseline Entity (State 1)
+    required: true
     selector:
       entity:
         domain: sensor
