@@ -1,0 +1,111 @@
+fields:
+  baseline_entity:
+    name: Baseline Entity (State 1)
+    selector:
+      entity:
+        domain: sensor
+  comparison_entity:
+    name: Comparison Entity (State 2)
+    required: true
+    selector:
+      entity:
+        domain: sensor
+  light_target:
+    name: Light(s) to Set
+    required: true
+    selector:
+      target:
+        entity:
+          domain: light
+  max_range:
+    name: Max Range
+    required: true
+    default: 10
+    selector:
+      number:
+        min: 1
+        max: 100
+  range_type:
+    name: Range Type
+    description: Choose how to interpret the max range
+    required: true
+    default: symmetric
+    selector:
+      select:
+        options:
+          - label: ± from baseline (e.g. entity 2 can go above or below baseline)
+            value: symmetric
+          - label: + from baseline (e.g. growing values only)
+            value: positive
+  color_range_min:
+    name: Hue Start (°)
+    required: true
+    default: 240
+    selector:
+      number:
+        min: 0
+        max: 360
+  color_range_max:
+    required: true
+    name: Hue End (°)
+    default: 0
+    selector:
+      number:
+        min: 0
+        max: 360
+  brightness:
+    name: Brightness
+    description: Percentage from 0 to 100 representing the final brightness level.
+    selector:
+      number:
+        min: 0
+        max: 100
+        step: 1
+        mode: slider
+        unit_of_measurement: "%"
+  wait_time:
+    name: Delay (seconds)
+    default: 1
+    selector:
+      number:
+        min: 0
+        max: 10
+        step: 0.5
+  use_hs_color:
+    name: Use HS Color Instead of RGB
+    required: true
+    default: false
+    selector:
+      boolean: {}
+sequence:
+  - data:
+      state1: "{{ states(baseline_entity) | float(0) }}"
+      state2: "{{ states(comparison_entity) | float(0) }}"
+      max_range: "{{ max_range }}"
+      color_range_min: "{{ color_range_min }}"
+      color_range_max: "{{ color_range_max }}"
+    action: pyscript.calculate_differential_rgb_value
+  - delay:
+      seconds: "{{ wait_time }}"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ use_hs_color }}"
+        sequence:
+          - target: "{{ light_target }}"
+            data:
+              hs_color: >
+                {% set hs = states('input_text.indicator_hs_output').split(',')
+                %} [{{ hs[0] | int }}, {{ hs[1] | int }}]
+              brightness: "{{ brightness }}"
+            action: light.turn_on
+      - conditions: []
+        sequence:
+          - target: "{{ light_target }}"
+            data:
+              rgb_color: >
+                {% set rgb =
+                states('input_text.indicator_rgb_output').split(',') %} [{{
+                rgb[0] | int }}, {{ rgb[1] | int }}, {{ rgb[2] | int }}]
+              brightness: "{{ brightness }}"
+            action: light.turn_on
