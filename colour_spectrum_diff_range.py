@@ -16,11 +16,13 @@
 #       max_range: 10
 #       color_range_min: 240
 #       color_range_max: 0
-
+#       use_color_temp: bool = False
+#       range_type: str = "symmetric"
+#
 # Set MAX_RANGE to the desired range for your entity state
 #   MAX_RANGE value is plus and minus from neutral/baseline
 #   e.g., 10 will be plus or minus 10, a total range of 20
-# Set COLOR_RANGE_LOW and COLOR_RANGE_HIGH using values 0 - 360
+# Set color_range_min and color_range_max using values 0 - 360
 #   these defined the spectrum of colors mapped to the min/max 
 #   value of the difference between your entity states (diff)
 #   0= red 60=yellow 120=green 180=cyan 240=blue 300=magenta
