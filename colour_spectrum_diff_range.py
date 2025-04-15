@@ -1,14 +1,18 @@
 # Helper script by Swordnut 
 # ===================================================
 # What it does - 
-# outputs RGB values according to the difference between two numeric entity states
+# outputs RGB/HS or colour temperature values according to the difference between two numeric entity states
 # allows customisation of the range of spectrum to be used 
 #   use a spectrum that goes from red to blue or from green to magenta etc
 #   make sure the values you get from your inputs are always represented
 # ===================================================
 # How to use - 
+# create an input text helpers called:
+#        input_text.indicator_hs_output
+#         input_text.indicator_rgb_output
+#         input_text.indicator_color_temp_output
 # an action bluebrint is avaialable for setting a light to a colour using the script that gives methods of setting the type of range (+/- or just +) as well as brightness, delay, RGB/HS format etc
-# Call from an automation, passing the values of two numeric entitiy states. 
+# alternatively call from an automation, passing the values of two numeric entitiy states. 
 #   1st is the base, 2nd is the comparison
 #   e.g., 
 #   action: pyscript.calculate_differential_rgb_value
@@ -32,27 +36,33 @@
 from PIL import ImageColor
 # native to pyscript, no other import handling needed
 
-MAX_RANGE = 10
-COLOR_RANGE_LOW = 240
-COLOR_RANGE_HIGH = 0
-
 @service
-def calculate_indicator_rgb(state1: float, state2: float):
+def calculate_differential_rgb_value(
+    state1: float,
+    state2: float,
+    max_range: float = 10,
+    color_range_min: int = 240,
+    color_range_max: int = 0,
+    color_temp_min: int = 500,
+    color_temp_max: int = 153,
+    use_color_temp: bool = False
+):
     diff = state2 - state1
+    clipped = max(min(diff, max_range), -max_range)
+    scaled = (clipped + max_range) / (2 * max_range)
 
-    # Clamp to range. ensures values do not exceed max range 
-    clipped = max(min(diff, MAX_RANGE), -MAX_RANGE)
+    if use_color_temp:
+        color_temp = int((1 - scaled) * color_temp_min + scaled * color_temp_max)
+        state.set("input_text.indicator_color_temp_output", str(color_temp))
+        log.info(f"[pyscript] Δ={diff:.2f} → color_temp: {color_temp} mireds")
+    else:
+        hue_deg = (1 - scaled) * color_range_min + scaled * color_range_max
+        hsv_str = f"hsv({int(hue_deg)}, 100%, 100%)"
+        rgb = ImageColor.getrgb(hsv_str)
+        rgb_str = f"{rgb[0]},{rgb[1]},{rgb[2]}"
+        hs_str = f"{round(hue_deg)},100"
 
-    # Map clipped diff to hue (240° = blue, 120° = green, 0° = red)
-    # -MAX_RANGE → 240, 0 → 120, +MAX_RANGE → 0
-    scaled = (clipped + MAX_RANGE) / (2 * MAX_RANGE)
-    hue_deg = (1 - scaled) * COLOR_RANGE_LOW
+        state.set("input_text.indicator_rgb_output", rgb_str)
+        state.set("input_text.indicator_hs_output", hs_str)
 
-    # Build HSV string and convert to RGB using PIL
-    hsv_str = f"hsv({int(hue_deg)}, 100%, 100%)"
-    rgb = ImageColor.getrgb(hsv_str)
-
-    # Set state as comma-separated string for YAML automation
-    rgb_str = f"{rgb[0]},{rgb[1]},{rgb[2]}"
-    state.set("input_text.indicator_rgb_output", rgb_str)
-    log.info(f"Set RGB: {rgb_str} from ΔT = {diff:.2f}°C (hue = {hue_deg:.1f}°)")
+        log.info(f"[pyscript] Δ={diff:.2f} → hue={hue_deg:.1f}° → RGB: {rgb_str} / HS: {hs_str}")
