@@ -84,7 +84,7 @@ sequence:
       max_range: "{{ max_range }}"
       color_range_min: "{{ color_range_min }}"
       color_range_max: "{{ color_range_max }}"
-    action: pyscript.calculate_differential_rgb_value
+    action: pyscript.colour_spectrum_diff_range
   - delay:
       seconds: "{{ wait_time }}"
   - choose:
