@@ -84,10 +84,19 @@ sequence:
       max_range: "{{ max_range }}"
       color_range_min: "{{ color_range_min }}"
       color_range_max: "{{ color_range_max }}"
-    action: pyscript.colour_spectrum_diff_range
+    action: pyscript.calculate_differential_rgb_value
   - delay:
       seconds: "{{ wait_time }}"
   - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ use_color_temp }}"
+        sequence:
+          - service: light.turn_on
+            target: "{{ light_target }}"
+            data:
+              color_temp: "{{ states('input_text.indicator_color_temp_output') | int }}"
+              brightness: "{{ brightness }}"
       - conditions:
           - condition: template
             value_template: "{{ use_hs_color }}"
