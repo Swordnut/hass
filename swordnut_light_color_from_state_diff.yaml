@@ -1,8 +1,7 @@
 alias: Set Light Color Based on Entity Difference
 description: >
-  Calculates RGB/Hue Saturation/Color Temperature values from the difference between two numbers
-  and applies the color to one or more lights.
-
+  Calculates RGB/Hue Saturation/Color Temperature values from the difference
+  between two numbers and applies the color to one or more lights.
 fields:
   baseline_entity:
     name: Baseline Entity (State 1)
@@ -10,14 +9,12 @@ fields:
     selector:
       entity:
         domain: sensor
-
   comparison_entity:
     name: Comparison Entity (State 2)
     required: true
     selector:
       entity:
         domain: sensor
-
   light_target:
     name: Light(s) to Set
     required: true
@@ -25,7 +22,6 @@ fields:
       target:
         entity:
           domain: light
-
   max_range:
     name: Max Range
     required: true
@@ -34,7 +30,6 @@ fields:
       number:
         min: 1
         max: 100
-
   range_type:
     name: Range Type
     description: Choose how to interpret the max range
@@ -47,29 +42,26 @@ fields:
             value: symmetric
           - label: + from baseline (e.g. growing values only)
             value: positive
-
   use_color_temp:
     name: Use Color Temperature Instead of RGB/HS
     default: false
     selector:
       boolean: {}
-
   color_temp_min:
     name: Warmest Color Temp (mireds)
     default: 500
     selector:
       color_temp: null
-
   color_temp_max:
     name: Coolest Color Temp (mireds)
     default: 153
     selector:
       color_temp: null
-
   color_range_min:
     name: Hue Start (°)
     description: >-
-      0 = Red | 60 = Yellow | 120 = Green | 180 = Cyan | 240 = Blue | 300 = Magenta
+      0 = Red | 60 = Yellow | 120 = Green | 180 = Cyan | 240 = Blue | 300 =
+      Magenta
     selector:
       number:
         min: 0
@@ -77,7 +69,6 @@ fields:
         step: 1
         mode: slider
     default: 240
-
   color_range_max:
     name: Hue End (°)
     selector:
@@ -87,7 +78,6 @@ fields:
         step: 1
         mode: slider
     default: 0
-
   brightness:
     name: Brightness
     description: Percentage from 0 to 100
@@ -98,7 +88,6 @@ fields:
         step: 1
         mode: slider
         unit_of_measurement: "%"
-
   wait_time:
     name: Delay (seconds)
     default: 1
@@ -107,18 +96,16 @@ fields:
         min: 0
         max: 10
         step: 0.5
-
   use_hs_color:
     name: Use HS Color Instead of RGB
     required: true
     default: false
     selector:
       boolean: {}
-
 sequence:
   - service: pyscript.calculate_differential_color_value
+    response_variable: color_result
     data:
-      response_variable: color_result
       state1: "{{ states(baseline_entity) | float(0) }}"
       state2: "{{ states(comparison_entity) | float(0) }}"
       max_range: "{{ max_range }}"
@@ -129,37 +116,33 @@ sequence:
       use_color_temp: "{{ use_color_temp }}"
       use_hue_sat: "{{ use_hs_color }}"
       range_type: "{{ range_type }}"
-
   - delay:
       seconds: "{{ wait_time }}"
-
   - choose:
       - conditions:
           - condition: template
             value_template: "{{ color_result.type == 'color_temp' }}"
         sequence:
-          - service: light.turn_on
-            target: "{{ light_target }}"
+          - target: "{{ light_target }}"
             data:
               color_temp: "{{ color_result.value }}"
               brightness_pct: "{{ brightness }}"
-
+            action: light.turn_on
       - conditions:
           - condition: template
             value_template: "{{ color_result.type == 'hs' }}"
         sequence:
-          - service: light.turn_on
-            target: "{{ light_target }}"
+          - target: "{{ light_target }}"
             data:
               hs_color: "{{ color_result.value }}"
               brightness_pct: "{{ brightness }}"
-
+            action: light.turn_on
       - conditions:
           - condition: template
             value_template: "{{ color_result.type == 'rgb' }}"
         sequence:
-          - service: light.turn_on
-            target: "{{ light_target }}"
+          - target: "{{ light_target }}"
             data:
               rgb_color: "{{ color_result.value }}"
               brightness_pct: "{{ brightness }}"
+            action: light.turn_on
