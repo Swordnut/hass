@@ -1,3 +1,6 @@
+alias: Set Light Color Based on Entity Difference
+description: >
+  Calculates RGB/Hue Saturation/Color Temperature values from the difference between two numbers and applies the color to one or more lights. 
 fields:
   baseline_entity:
     name: Baseline Entity (State 1)
@@ -38,25 +41,45 @@ fields:
             value: symmetric
           - label: + from baseline (e.g. growing values only)
             value: positive
+  use_color_temp:
+    name: Use Color Temperature Instead of RGB/HS
+    default: false
+    selector:
+      boolean: {}
+  color_temp_min:
+    name: Warmest Color Temp (mireds)
+    default: 500
+    selector:
+      color_temp: null
+  color_temp_max:
+    name: Coolest Color Temp (mireds)
+    default: 153
+    selector:
+      color_temp: null
   color_range_min:
     name: Hue Start (°)
-    required: true
+    description: >-
+      0 = Red | 60 = Yellow | 120 = Green | 180 = Cyan | 240 = Blue | 300 =
+      Magenta
+    selector:
+      number:
+        min: 0
+        max: 360
+        step: 1
+        mode: slider
     default: 240
-    selector:
-      number:
-        min: 0
-        max: 360
   color_range_max:
-    required: true
     name: Hue End (°)
-    default: 0
     selector:
       number:
         min: 0
         max: 360
+        step: 1
+        mode: slider
+    default: 0
   brightness:
     name: Brightness
-    description: Percentage from 0 to 100 representing the final brightness level.
+    description: Percentage from 0 to 100
     selector:
       number:
         min: 0
@@ -80,12 +103,18 @@ fields:
       boolean: {}
 sequence:
   - data:
+      response_variable: color_result
       state1: "{{ states(baseline_entity) | float(0) }}"
       state2: "{{ states(comparison_entity) | float(0) }}"
       max_range: "{{ max_range }}"
       color_range_min: "{{ color_range_min }}"
       color_range_max: "{{ color_range_max }}"
-    action: pyscript.calculate_differential_rgb_value
+      color_temp_min: "{{ color_temp_min }}"
+      color_temp_max: "{{ color_temp_max }}"
+      use_color_temp: "{{ use_color_temp }}"
+      use_hue_sat: "{{ use_hs_color_instead_of_rgb }}"
+      range_type: "{{ range_type }}"
+    action: pyscript.calculate_differential_color_value
   - delay:
       seconds: "{{ wait_time }}"
   - choose:
@@ -93,11 +122,11 @@ sequence:
           - condition: template
             value_template: "{{ use_color_temp }}"
         sequence:
-          - service: light.turn_on
-            target: "{{ light_target }}"
+          - target: "{{ light_target }}"
             data:
-              color_temp: "{{ states('input_text.indicator_color_temp_output') | int }}"
-              brightness: "{{ brightness }}"
+              color_temp: "{{ color_result.value | int }}"
+              brightness_pct: "{{ brightness }}"
+            action: light.turn_on
       - conditions:
           - condition: template
             value_template: "{{ use_hs_color }}"
@@ -105,17 +134,16 @@ sequence:
           - target: "{{ light_target }}"
             data:
               hs_color: >
-                {% set hs = states('input_text.indicator_hs_output').split(',')
-                %} [{{ hs[0] | int }}, {{ hs[1] | int }}]
-              brightness: "{{ brightness }}"
+                {% set hs = color_result.value.split(',') %} [{{ hs[0] | int
+                }}, {{ hs[1] | int }}]
+              brightness_pct: "{{ brightness }}"
             action: light.turn_on
       - conditions: []
         sequence:
           - target: "{{ light_target }}"
             data:
               rgb_color: >
-                {% set rgb =
-                states('input_text.indicator_rgb_output').split(',') %} [{{
-                rgb[0] | int }}, {{ rgb[1] | int }}, {{ rgb[2] | int }}]
-              brightness: "{{ brightness }}"
+                {% set rgb = color_result.value.split(',') %} [{{ rgb[0] | int
+                }}, {{ rgb[1] | int }}, {{ rgb[2] | int }}]
+              brightness_pct: "{{ brightness }}"
             action: light.turn_on
