@@ -18,7 +18,7 @@
 # - You must provide two values to compare (for example: two temperature sensors).
 #
 # Example:
-# service: pyscript.calculate_differential_rgb_value
+# service: pyscript.calculate_differential_color_value
 # data:
 #   state1: "{{ states('sensor.kitchen_temperature') | float(0) }}"
 #   state2: "{{ states('sensor.lounge_temperature') | float(0) }}"
