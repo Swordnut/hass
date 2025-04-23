@@ -59,7 +59,7 @@
 # ===================================================
 from PIL import ImageColor
 
-@service
+@service(supports_response="only")
 def calculate_differential_rgb_value(
     state1: float,
     state2: float,
