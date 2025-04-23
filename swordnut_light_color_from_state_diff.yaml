@@ -103,7 +103,7 @@ fields:
     selector:
       boolean: {}
 sequence:
-  - service: pyscript.calculate_differential_color_value
+  - action: pyscript.calculate_differential_color_value
     response_variable: color_result
     data:
       state1: "{{ states(baseline_entity) | float(0) }}"
